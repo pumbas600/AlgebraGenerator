@@ -1,34 +1,44 @@
 import random
+import math, time
 
-brackets_left = 2
-brackets_right = 1
+brackets_left = 3
+brackets_right = 2
 
 is_integer_answer = True
-minX = -20
-maxX = 20
-
-min_coefficient = -10
+maxX = 12
 max_coefficient = 10
-
+max_rhs_total = 45
+chance_of_negative = 0.2
 x = 0
 
 rhs_total = 0
 rhs = ''
 
+def random_sign(n):
+    return -n if random.random() < chance_of_negative else n
+
+def generate_random_number(func, max_value):
+    while True:
+        rn = func(0, max_value)
+        if rn != 0:
+            return random_sign(rn)
 
 def generate_x(integer_answer):
     if integer_answer:
-        x = random.randint(minX, maxX)
+        x = generate_random_number(random.randint, maxX)
     else:
-        x = random.randrange(minX, maxX)
+        x = generate_random_number(random.uniform, maxX)
     return x
 
 
 def get_display_number(n, with_sign=True):
-    if n == 1:
+    if n == 0:
+        return 0
+
+    if n == 1 or n == -1:
         if with_sign:
             return '+' if n > 0 else '-'
-        return '' if n > 0 else str(n)
+        return '' if n > 0 else '-'
     else:
         if with_sign:
             return f'+{n}' if n > 0 else str(n)
@@ -40,9 +50,9 @@ def generate_rhs(brackets_right, x):
     rhs = ''
     for n in range(brackets_right):
         # c(ax + b)
-        a = random.randint(min_coefficient, max_coefficient)
-        b = random.randint(min_coefficient, max_coefficient)
-        c = random.randint(min_coefficient, max_coefficient)
+        a = generate_random_number(random.randint, max_coefficient)
+        b = generate_random_number(random.randint, max_coefficient)
+        c = generate_random_number(random.randint, max_coefficient)
 
         rhs_total += c * (a * x + b)
         # Only add a space before the brackets if this is not the first set of brackets.
@@ -52,72 +62,82 @@ def generate_rhs(brackets_right, x):
     return rhs, rhs_total
 
 
-def distribute_total(brackets_left, rhs_total):
+def distribute_total(brackets, total):
     while True:
-        random_distribution = []
+        random_distribution = [generate_random_number(random.uniform, 1) for _ in range(brackets)]
         # If by chance, the sum is 0, this will cause a divide by zero error, so we need to
         # regenerate the random numbers until their sum isn't 0.
-
-        for _ in range(brackets_left):
-            while True:
-                # Distribute more towards positive numbers
-                rd = random.uniform(-0.5, 1)
-                if rd != 0:
-                    random_distribution.append(rd)
-                    break
 
         distributions_sum = sum(random_distribution)
         if distributions_sum != 0:
             break
 
-    multiplier = rhs_total / distributions_sum
-
-    distribution = [round(n * multiplier) for n in random_distribution]
+    multiplier = total / distributions_sum
+    distribution = []
+    for n in random_distribution:
+        rounded = round(n * multiplier)
+        if rounded == 0:
+            # print('rounded is 0')
+            rounded = random_sign(1)
+        distribution.append(rounded)
 
     # Check for rounding errors which may cause the total of the results
     # to not equal rhs_total
     sum_results = sum(distribution)
-    if sum_results != rhs_total:
+    if sum_results != total:
         # Add the difference to a random one of the results.
-        index = random.randint(0, brackets_left - 1)
-        distribution[index] += rhs_total - sum_results
-        print('Sum didnt equal total')
+        while True:
+            index = random.randint(0, brackets - 1)
+            if distribution[index] + total - sum_results != 0:
+                break
+        distribution[index] += total - sum_results
+        # print('Sum didnt equal total')
     return distribution
 
 
 def find_factors(n):
-    factors = []
-    for x in range(1, int(abs(n / 2)) + 1):
+    factors = [1, n]
+    for x in range(2, int(math.ceil(abs(n / 2))) + 1):
         if n % x == 0:
-            factors.append(x)
-            factors.append(n / x)
+            factors.append(int(x))
+            factors.append(int(n / x))
     return factors
 
 
-def generate_lhs(distributions, x):
-    lhs = ''
+def generate_side(distributions, x):
+    side = ''
 
     for n in range(len(distributions)):
         d = distributions[n]
         # c(ax + b)
         # print(d)
         factors = find_factors(d)
-        c = int(random.choice(factors))
-
+        c = random.choice(factors)
+        if c == 0: print('c == 0')
         inside_brackets = d / c
-        a = random.randint(min_coefficient, max_coefficient)
-        b = int(inside_brackets - a * x)
-        lhs += (str(c) if n == 0 else f' {get_display_number(c)}') \
+        while True:
+            a = generate_random_number(random.randint, max_coefficient)
+            b = int(inside_brackets - a * x)
+            if b != 0:
+                break
+
+        side += (get_display_number(c, False) if n == 0 else f' {get_display_number(c)}') \
             + f'({get_display_number(a, False)}x {get_display_number(b)})'
-    return lhs
+    return side
 
 
 if __name__ == '__main__':
     if x == 0: x = generate_x(is_integer_answer)
 
-    rhs, rhs_total = generate_rhs(brackets_right, x)
-    distributions = distribute_total(brackets_left, rhs_total)
-    lhs = generate_lhs(distributions, x)
+    random.seed = time.time()
+    rhs_total = generate_random_number(random.randint, max_rhs_total)
+    rhs_distributions = distribute_total(brackets_right, rhs_total)
+    rhs = generate_side(rhs_distributions, x)
+
+    lhs_distributions = distribute_total(brackets_left, rhs_total)
+    # print(lhs_distributions)
+    lhs = generate_side(lhs_distributions, x)
 
     print(f'{lhs} = {rhs}')
     print(f'Answer is x = {x}')
+    print(f'Seed is: {random.seed}')
