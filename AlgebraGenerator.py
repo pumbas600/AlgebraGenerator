@@ -18,13 +18,11 @@ rhs = ''
 def random_sign(n):
     return -n if random.random() < chance_of_negative else n
 
-def generate_random_number(func, max_value):
+def generate_random_number(func, max_value, generate_sign=True):
     while True:
         rn = func(0, max_value)
         if rn != 0:
-            return random_sign(rn)
-        else:
-            pass
+            return random_sign(rn) if generate_sign else rn
 
 def generate_x(integer_answer):
     if integer_answer:
@@ -69,11 +67,10 @@ def generate_rhs(brackets_right, x):
 
 def generate_random_distributions(n):
 
-    # Distribution function is 2(x-0.5)^3 + 0.5, which gives values between 0.25 and 0.75 for values of x between
-    # 0 and 1. This distribution causes most values to be grouped around 0.5, but most of the values are very similar.
-    distribution_function = lambda x: 2 * math.pow(x - 0.5, 3) + 0.5
-    #distribution_function = lambda x: x
-    random_distribution = [distribution_function(generate_random_number(random.uniform, 1)) for _ in range(n)]
+    # Distribution function is 0.75x^3 + 0.25, which gives values between -0.5 and 1 for values of x between
+    # -1 and 1. This distribution causes most values to be grouped around 0.25, but most of the values are very similar.
+    distribution_function = lambda x: 0.75 * x * x * x + 0.25
+    random_distribution = [distribution_function(generate_random_number(random.uniform, 1, generate_sign=False)) for _ in range(n)]
     return random_distribution
 
 
@@ -96,22 +93,21 @@ def distribute_total(brackets, total):
             rounded = random_sign(1)
         distribution.append(rounded)
 
-    print('distributed')
-
     #TODO: Find infinite loop in below code snippet (up until the return)
 
     # Check for rounding errors which may cause the total of the results
     # to not equal rhs_total
     sum_results = sum(distribution)
     if sum_results != total:
-        # Add the difference to a random one of the results.
-        while True:
-            index = random.randint(0, brackets - 1)
-            if distribution[index] + total - sum_results != 0:
+        # Add the difference to the first valid distribution
+        for i in range(len(distribution)):
+            if distribution[i] + total - sum_results != 0:
+                distribution[i] += total - sum_results
                 break
-        distribution[index] += total - sum_results
-        # print('Sum didnt equal total')
-    print('sum == total')
+
+            if i == len(distribution) - 1:
+                print('Cannot redistribute')
+
     return distribution
 
 
@@ -122,10 +118,10 @@ def find_factors(n):
             factors.append(int(x))
             factors.append(int(n / x))
 
-        if x > 100:
-            pass
     return factors
 
+def decimal_to_fraction(n):
+    pass
 
 def generate_side(distributions, x):
     side = ''
@@ -136,7 +132,7 @@ def generate_side(distributions, x):
         # print(d)
         factors = find_factors(d)
         c = random.choice(factors)
-        if c == 0: print('c == 0')
+
         inside_brackets = d / c
         while True:
             a = generate_random_number(random.randint, max_coefficient)
@@ -155,14 +151,11 @@ if __name__ == '__main__':
         x = generate_x(is_integer_answer)
 
         rhs_total = generate_random_number(random.randint, max_rhs_total)
-        print('total')
         rhs_distributions = distribute_total(brackets_right, rhs_total)
-        print('rhs d')
         rhs = generate_side(rhs_distributions, x)
-        print('rhs')
 
         lhs_distributions = distribute_total(brackets_left, rhs_total)
-        print(lhs_distributions, rhs_distributions)
+        # print(lhs_distributions, rhs_distributions)
         lhs = generate_side(lhs_distributions, x)
 
         print(f'{lhs} = {rhs}')
