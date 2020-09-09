@@ -1,6 +1,7 @@
 import math
 import random
 import time
+import fractions
 
 brackets_left = 2
 brackets_right = 1
@@ -106,22 +107,30 @@ def distribute_total(brackets, total):
                 break
 
             if i == len(distribution) - 1:
-                print('Cannot redistribute')
+                # Cannot redistribute the total as it is, so try regenerating the distribution.
+                distribution = distribute_total(brackets, total)
+                # print('Cannot redistribute')
 
     return distribution
 
 
 def find_factors(n):
-    factors = [1, n]
-    for x in range(2, int(math.ceil(abs(n / 2))) + 1):
-        if n % x == 0:
-            factors.append(int(x))
-            factors.append(int(n / x))
+    factors = [1]
+
+    if isinstance(n, fractions.Fraction):
+        pass
+
+    else:
+        factors.append(n)
+        for x in range(2, int(math.ceil(abs(n / 2))) + 1):
+            if n % x == 0:
+                factors.append(int(x))
+                factors.append(int(n / x))
 
     return factors
 
 def decimal_to_fraction(n):
-    pass
+    return fractions.Fraction(n)
 
 def generate_side(distributions, x):
     side = ''
@@ -147,6 +156,8 @@ def generate_side(distributions, x):
 
 if __name__ == '__main__':
     random.seed = time.time()
+
+    fraction = fractions.Fraction()
     for _ in range(25):
         x = generate_x(is_integer_answer)
 
@@ -163,4 +174,4 @@ if __name__ == '__main__':
         # print(f'Seed is: {random.seed}')
     print('Complete')
 
-    #TODO: Fractions - https://cboard.cprogramming.com/c-programming/158102-program-convert-decimal-fraction.html
+    #TODO: Fractions- https://cboard.cprogramming.com/c-programming/158102-program-convert-decimal-fraction.html
